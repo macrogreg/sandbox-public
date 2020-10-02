@@ -49,6 +49,16 @@ namespace Datadog.Trace.PerfTesting.GuidBasedBusyWork
                 using (HttpResponseMessage response = await client.GetAsync(GuidServiceUrl))
                 {
                     string payload = await response.Content.ReadAsStringAsync();
+                    
+                    if(payload != null)
+                    {
+                        payload = payload.Trim();
+                        while(payload.StartsWith("\"") && payload.EndsWith("\""))
+                        {
+                            payload = payload.Substring(1, payload.Length - 2);
+                        }
+                    }
+
                     Guid guid = Guid.Parse(payload);
                     return guid;
                 }
