@@ -9,8 +9,8 @@ namespace ActivityListeningTest01
     {
         static void Main(string[] args)
         {
-            // (new FireAndReceiveActivities01()).Exec();
-            (new ActivityContextCreation()).Exec();
+            (new FireAndReceiveActivities01()).Exec();
+            //(new ActivityContextCreation()).Exec();
         }
     }
 }

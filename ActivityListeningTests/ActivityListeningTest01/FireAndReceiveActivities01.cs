@@ -219,6 +219,16 @@ namespace ActivityListeningTest01
             Console.ReadLine();
         }
 
+
+        private class SpecialActivity : Activity
+        {
+            public SpecialActivity(string operationName)
+                : base(operationName)
+            {
+
+            }
+        }
+
         private void ConfigureActivityListening()
         {
             Action<Activity, string> activityStartedHandler = (Activity a, string actSrcFilter) =>
