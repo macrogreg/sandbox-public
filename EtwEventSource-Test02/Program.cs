@@ -1,10 +1,4 @@
-﻿using Microsoft.Diagnostics.Symbols;
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tracing.Etlx;
-using Microsoft.Diagnostics.Tracing.Parsers;
-using Microsoft.Diagnostics.Tracing.Parsers.Clr;
-using Microsoft.Diagnostics.Tracing.Session;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -13,6 +7,12 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Symbols;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Etlx;
+using Microsoft.Diagnostics.Tracing.Parsers;
+using Microsoft.Diagnostics.Tracing.Parsers.Clr;
+using Microsoft.Diagnostics.Tracing.Session;
 
 namespace EtwEventSource_Test02
 {
@@ -21,21 +21,38 @@ namespace EtwEventSource_Test02
         //public const bool WriteEtwToFile = true;
         public const bool WriteEtwToFile = false;
 
+        public const bool CollectKernelStacks = true;
+        //public static readonly TimeSpan DisableRundownProviderDelay = TimeSpan.FromSeconds(15);
+        public static readonly TimeSpan DisableRundownProviderDelay = Timeout.InfiniteTimeSpan;
+
+        public const bool SummarizeOnlyUserStacks = false;
+
         static void Main(string[] args)
         {
-            int thisProcessId = Process.GetCurrentProcess().Id;
-            Console.WriteLine($"Process Id:  {thisProcessId}");
+            AdminElevator.Settings.SkipAdminEnforcement = (CollectKernelStacks == false);
 
+            if (! AdminElevator.EnsureAdminOrForkProcess())
+            {
+                return;
+            }
+
+            int thisProcessId = AdminElevator.ThisProcessId;
+
+            Console.WriteLine();
+            Console.WriteLine($"Process Id:  {AdminElevator.ThisProcessId}");
             Console.WriteLine("Starting.");
+            Console.WriteLine();
 
             var computer = new Computer();
             Task computerTask = Task.Run(computer.Run);
 
             Dictionary<string, int> stackCounts = new Dictionary<string, int>();
             int totalStackCount = 0;
+            int stacksWithUserCode = 0;
 
             int totalProcEventCount = 0;
             int clrProcEventCount = 0;
+            int rundownProcEventCount = 0;
             int stackwalkProcEventCount = 0;
 
             Task sessionTask = null;
@@ -51,18 +68,18 @@ namespace EtwEventSource_Test02
 
             using (session)
             {
+                if (CollectKernelStacks)
+                {
+                    Console.WriteLine("Enabling Kernel Provider.");
+                    session.EnableKernelProvider(flags: KernelTraceEventParser.Keywords.Profile, stackCapture: KernelTraceEventParser.Keywords.All);
+                }
+                else
+                {
+                    Console.WriteLine("NOT Enabling Kernel Provider.");
+                }
+
                 unchecked
                 {
-                    //session.EnableProvider(ClrRundownTraceEventParser.ProviderGuid,
-                    //                        providerLevel:
-                    //                                TraceEventLevel.Verbose,
-                    //                        matchAnyKeywords:
-                    //                                (ulong)ClrRundownTraceEventParser.Keywords.Jit
-                    //                                | (ulong)ClrRundownTraceEventParser.Keywords.JittedMethodILToNativeMap
-                    //                                | (ulong)ClrRundownTraceEventParser.Keywords.Loader
-                    //                                | (ulong)ClrRundownTraceEventParser.Keywords.StartEnumeration
-                    //                                | (ulong)ClrRundownTraceEventParser.Keywords.StartEnumeration);
-
                     session.EnableProvider(ClrRundownTraceEventParser.ProviderGuid,
                                             providerLevel:
                                                     TraceEventLevel.Verbose,
@@ -71,9 +88,12 @@ namespace EtwEventSource_Test02
                                                     | (ulong)ClrRundownTraceEventParser.Keywords.JittedMethodILToNativeMap
                                                     | (ulong)ClrRundownTraceEventParser.Keywords.Loader
                                                     | (ulong)ClrRundownTraceEventParser.Keywords.StartEnumeration
+                                                    | (ulong)ClrRundownTraceEventParser.Keywords.StopEnumeration
+                                                    | (ulong)ClrRundownTraceEventParser.Keywords.ForceEndRundown
                                                     | (ulong)ClrRundownTraceEventParser.Keywords.Stack
                                                     | (ulong)ClrRundownTraceEventParser.Keywords.CodeSymbolsRundown
                                                     | (ulong)ClrRundownTraceEventParser.Keywords.Compilation);
+
 
                     session.EnableProvider(ClrTraceEventParser.ProviderGuid,
                                             providerLevel:
@@ -127,9 +147,14 @@ namespace EtwEventSource_Test02
                             {
                                 clrProcEventCount++;
                             }
+                            else if (e.ProviderGuid == ClrRundownTraceEventParser.ProviderGuid)
+                            {
+                                rundownProcEventCount++;
+                            }
                             else
                             {
-                                //Console.WriteLine($"Non-CLR event: {e.EventName}");
+                                ;
+                                //Console.WriteLine($"{e.ProviderName} / {e.EventName}");
                             }
 
                             if (!e.EventName.Equals("ClrStack/Walk"))
@@ -142,7 +167,11 @@ namespace EtwEventSource_Test02
                             Console.WriteLine();
                             Console.WriteLine();
                             Console.WriteLine();
-                            Console.WriteLine($"Total events: {totalProcEventCount}; CLR events: {clrProcEventCount}; stackwalk events: {stackwalkProcEventCount}; lost events: {tleSource.EventsLost}.");
+                            Console.WriteLine($"Total events: {totalProcEventCount};"
+                                            + $" Rundown events: {rundownProcEventCount};"
+                                            + $" CLR events: {clrProcEventCount};"
+                                            + $" StackWalk events: {stackwalkProcEventCount};"
+                                            + $" lost events: {tleSource.EventsLost}.");
 
                             TraceCallStack stack = e.CallStack();
                             if (stack == null)
@@ -154,6 +183,7 @@ namespace EtwEventSource_Test02
                             TraceCallStack walkedStack = stack;
                             StringBuilder stackStrBld = new StringBuilder();
                             bool hasGoodFrames = false;
+                            bool hasUserCode = false;
                             while (walkedStack != null)
                             {
                                 TraceCodeAddress codeAddress = walkedStack.CodeAddress;
@@ -177,20 +207,32 @@ namespace EtwEventSource_Test02
 
                                 if (codeAddress.Method != null)
                                 {
-                                    //stackStrBld.Append(walkedStack.CallStackIndex);
-                                    //stackStrBld.Append(": ");
-                                    stackStrBld.Append("\"");
+                                    stackStrBld.Append("0x");
+                                    stackStrBld.Append(codeAddress.Address.ToString("x13"));
+                                    stackStrBld.Append(" | \"");
                                     stackStrBld.Append(codeAddress.FullMethodName);
                                     stackStrBld.Append("\" in \"");
                                     stackStrBld.Append(codeAddress.ModuleName);
                                     stackStrBld.Append("\"");
+
+                                    bool userCodeFrame = codeAddress.FullMethodName.Contains("EtwEventSource_Test02", StringComparison.OrdinalIgnoreCase)
+                                                            || codeAddress.FullMethodName.Contains("EtwEventSource-Test02", StringComparison.OrdinalIgnoreCase)
+                                                            || codeAddress.ModuleName.Contains("EtwEventSource_Test02", StringComparison.OrdinalIgnoreCase)
+                                                            || codeAddress.ModuleName.Contains("EtwEventSource-Test02", StringComparison.OrdinalIgnoreCase);
+
+                                    if (userCodeFrame)
+                                    {
+                                        hasUserCode = true;
+                                        stackStrBld.Append("            << USER CODE!");
+                                    }
+
                                     hasGoodFrames = true;
                                 }
                                 else
                                 {
                                     stackStrBld.Append("0x");
-                                    stackStrBld.Append(codeAddress.Address.ToString("x"));
-                                    stackStrBld.Append(" (");
+                                    stackStrBld.Append(codeAddress.Address.ToString("x13"));
+                                    stackStrBld.Append(" | (");
                                     stackStrBld.Append(codeAddress.CodeAddressIndex);
                                     if (! String.IsNullOrEmpty(codeAddress.ModuleName))
                                     {
@@ -206,6 +248,11 @@ namespace EtwEventSource_Test02
                                 }
 
                                 walkedStack = walkedStack.Caller;
+                            }
+
+                            if (hasUserCode)
+                            {
+                                stacksWithUserCode++;
                             }
 
                             if (stackStrBld.Length > 0 && hasGoodFrames == true)
@@ -227,7 +274,7 @@ namespace EtwEventSource_Test02
                                 Console.WriteLine($"[{e.TimeStampRelativeMSec} msec] Stack sample on thread {e.ThreadID}."
                                                 + $" This stack was seen {scount} times on any thread;"
                                                 + $" this is {Math.Round(scount * 100000.0 / totalStackCount) / 1000.0}% of all samples."
-                                                + $" Total observed stacks: {totalStackCount}; Total distinct stacks: {stackCounts.Count}.");
+                                                + $" Observed stacks: {totalStackCount}; Distinct stacks: {stackCounts.Count}; Stacks with user code: {stacksWithUserCode}.");
                                 Console.WriteLine(stackStr);
                             }
 
@@ -237,13 +284,39 @@ namespace EtwEventSource_Test02
                         sessionTask = Task.Run(() => session.Source.Process());
                     }
 
-                    Task.Run(() =>
+                    if (CollectKernelStacks && DisableRundownProviderDelay != TimeSpan.Zero && DisableRundownProviderDelay != Timeout.InfiniteTimeSpan)
+                    {
+                        Task.Run(async () =>
                         {
-                            Thread.Sleep(TimeSpan.FromSeconds(5));
-                            session.DisableProvider(ClrRundownTraceEventParser.ProviderGuid);
-                            Console.WriteLine("*********** Disabled Rundown provider!");
-                        });
+                            try
+                            {
+                                Console.WriteLine($"Will disable Rundown provider in {DisableRundownProviderDelay}.");
+                                await Task.Delay(DisableRundownProviderDelay);
 
+                                for(int i = 0; i < 100; i++)
+                                {
+                                    Console.WriteLine("*********** Disabling Rundown provider now!");
+                                }
+
+                                session.DisableProvider(ClrRundownTraceEventParser.ProviderGuid);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine(ex);
+                            }
+
+                            for (int i = 0; i < 100; i++)
+                            {
+                                Console.WriteLine("*********** Disabled Rundown provider!");
+                            }
+                        });
+                    }
+                    else if (CollectKernelStacks)
+                    {
+                        Console.WriteLine($"Will NOT disable Rundown provider.");
+                    }
+
+                    Console.WriteLine();
                     Console.WriteLine("Started.");
                     Console.WriteLine("Press enter to finish.");
                     Console.ReadLine();
@@ -276,16 +349,38 @@ namespace EtwEventSource_Test02
             Console.WriteLine("*********** *********** *********** *********** *********** *********** *********** *********** *********** *********** *********** ***********");
             Console.WriteLine($"Total observed stacks: {totalStackCount}; Total distinct stacks: {stackCounts.Count}.");
 
+            int distinctStacksWithUserCode = 0; 
+
             var sortedStackCounts = stackCounts.OrderBy((kvp) => kvp.Value);
             foreach (KeyValuePair<string, int> stackStats in sortedStackCounts)
             {
+                bool hasUserCode = stackStats.Key.Contains("EtwEventSource_Test02", StringComparison.OrdinalIgnoreCase)
+                                        || stackStats.Key.Contains("EtwEventSource-Test02", StringComparison.OrdinalIgnoreCase);
+
+                if (SummarizeOnlyUserStacks && !hasUserCode)
+                {
+                    continue;
+                }
+
                 Console.WriteLine();
+
+                if (hasUserCode)
+                {
+                    Console.WriteLine($"$$$$$$$$$$$ Next stack has user code! $$$$$$$$$$$");
+                    distinctStacksWithUserCode++;
+                }
+
                 Console.WriteLine($"Next stack was seen {stackStats.Value} times on any thread;"
                                 + $" this is {Math.Round(stackStats.Value * 100000.0 / totalStackCount) / 1000.0}% of all samples.");
                 Console.WriteLine(stackStats.Key);
             }
 
-            Console.WriteLine($"Total observed stacks: {totalStackCount}; Total distinct stacks: {stackCounts.Count}.");
+            Console.WriteLine($"Total observed stacks: {totalStackCount}; Total distinct stacks: {stackCounts.Count}; Total distinct stacks with user code: {distinctStacksWithUserCode}.");
+            Console.WriteLine();
+            Console.WriteLine($"Total events: {totalProcEventCount};"
+                            + $" Rundown events: {rundownProcEventCount};"
+                            + $" CLR events: {clrProcEventCount};"
+                            + $" StackWalk events: {stackwalkProcEventCount}.");
 
             Console.WriteLine("Press enter to terminate.");
             Console.ReadLine();
