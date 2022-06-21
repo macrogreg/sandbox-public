@@ -204,9 +204,15 @@ namespace Temporal.Sdk.StubGenerator
         /// </summary>
         private static bool IsSyntaxClassDeclarationWithAttributes(SyntaxNode node, CancellationToken _)
         {
-            return (node is ClassDeclarationSyntax classDeclarationNode)
-                    && (classDeclarationNode.AttributeLists.Count > 0
-                        || (classDeclarationNode.BaseList.Types != null && classDeclarationNode.BaseList.Types.Count > 0));
+            if (node is not ClassDeclarationSyntax classDeclarationNode)
+            {
+                return false;
+            }
+
+            return (classDeclarationNode.AttributeLists.Count > 0)
+                    || (classDeclarationNode.BaseList != null
+                            && classDeclarationNode.BaseList.Types != null
+                            && classDeclarationNode.BaseList.Types.Count > 0);
         }
 
         /// <summary>
