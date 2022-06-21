@@ -1,18 +1,18 @@
 ﻿using Temporal.Prototypes.MockSdk;
 
-namespace Temporal.Prototypes.AWfImplenetation
+namespace Temporal.Prototypes.OtherAssemblyWorkflow
 {
     public record AWfInput(string Text, int Number);
     public record AWfResult(IList<string> Lines);
 
 
-    [WorkflowImplementation(WorkflowTypeName = "SomePoCWorkflow")]
-    public class AWorkflowImplementation
+    [WorkflowImplementation(WorkflowTypeName = "BinaryWorkflow")]
+    public class OtherAssemblyWorkflowImpl
     {
         [WorkflowMainRoutine]
-        public async Task<AWfResult> MainAsync(AWfInput input, IWorkflowContext workflowCtx)
+        public async Task<AWfResult> ExecAsync(AWfInput input, IWorkflowContext workflowCtx)
         {
-            Console.WriteLine($"{nameof(MainAsync)}(..) was invoked.");
+            Console.WriteLine($"{nameof(ExecAsync)}(..) was invoked.");
             await Task.Delay(millisecondsDelay: 1);
 
             List<string> lines = new();
@@ -29,23 +29,23 @@ namespace Temporal.Prototypes.AWfImplenetation
         }
 
         [WorkflowQueryHandler]
-        public int RunQuery()
+        public int RunAQuery()
         {
-            Console.WriteLine($"{nameof(RunQuery)}() was invoked.");
+            Console.WriteLine($"{nameof(RunAQuery)}() was invoked.");
             return 42;
         }
 
         [WorkflowSignalHandler]
-        public async Task HandleSignal1Async(string input)
+        public async Task HandleSignal01Async(string input)
         {
-            Console.WriteLine($"{nameof(HandleSignal1Async)}({nameof(input)}=\"{input}\") was invoked.");
+            Console.WriteLine($"{nameof(HandleSignal01Async)}({nameof(input)}=\"{input}\") was invoked.");
             await Task.Delay(millisecondsDelay: 1);            
         }
 
         [WorkflowSignalHandler(SignalTypeName = "PatricularSignal")]
-        public void HandleSignal2(double input)
+        public void HandleSignal02(double input)
         {
-            Console.WriteLine($"{nameof(HandleSignal2)}({nameof(input)}={input}) was invoked.");            
+            Console.WriteLine($"{nameof(HandleSignal02)}({nameof(input)}={input}) was invoked.");            
         }
 
         public async Task AnotherPublicApi(string input)

@@ -1,6 +1,4 @@
-﻿using System;
-using Temporal.Prototypes.MockSdk;
-using Temporal.Sdk.Generated;
+﻿using Temporal.Prototypes.MockSdk;
 
 namespace Temporal.Prototypes.SampleApp42
 {

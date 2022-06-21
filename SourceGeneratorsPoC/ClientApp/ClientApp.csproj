@@ -36,4 +36,10 @@
     <ProjectReference Include="..\TemporalStubGenerator\TemporalStubGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="BinaryOnlyWfImplementation.dll">
+      <HintPath>..\BinaryOnlyWfImplementation\bin\Debug\net6.0\BinaryOnlyWfImplementation.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>
