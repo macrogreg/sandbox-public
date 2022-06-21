@@ -12,6 +12,7 @@ namespace Temporal.Prototypes.SampleApp42
     // [WorkflowImplementation]
     public class SampleAvWorkflowImplementation
     {
+        [WorkflowMainRoutine]
         public async Task<SampleAvWfResult> ExecWorkflowAsync(SampleAvWfInput input, IWorkflowContext workflowCtx)
         {
             Console.WriteLine($"{nameof(ExecWorkflowAsync)}(..) was invoked.");
