@@ -38,7 +38,10 @@
 
   <ItemGroup>
     <Reference Include="BinaryOnlyWfImplementation.dll">
+      <!--
       <HintPath>..\BinaryOnlyWfImplementation\bin\Debug\net6.0\BinaryOnlyWfImplementation.dll</HintPath>
+      -->
+      <HintPath>..\BinaryOnlyWfImplementation\CompiledAssembly\BinaryOnlyWfImplementation.dll</HintPath>
     </Reference>
   </ItemGroup>
 
