@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -12,7 +11,7 @@ using Microsoft.CodeAnalysis.Text;
 namespace Temporal.Sdk.StubGenerator
 {
     [Generator]
-    public class SourceBasedWorkflowStubGenerator : IIncrementalGenerator
+    public class WorkflowStubGenerator : IIncrementalGenerator
     {
         private static class WfStubAttr
         {
@@ -57,7 +56,14 @@ namespace Temporal.Sdk.StubGenerator
             public const string TypeName = "WorkflowQueryHandlerAttribute";
             public const string Namespace = "Temporal.Prototypes.MockSdk";
             public const string FullName = Namespace + "." + TypeName;
-            public const string PrNmSigTypeName = "QueryTypeName";
+            public const string PrNmQryTypeName = "QueryTypeName";
+        }
+
+        private static class WfCtxIface
+        {
+            public const string TypeName = "IWorkflowContext";
+            public const string Namespace = "Temporal.Prototypes.MockSdk";
+            public const string FullName = Namespace + "." + TypeName;
         }
 
         private static class Diagnostics
@@ -70,7 +76,7 @@ namespace Temporal.Sdk.StubGenerator
             /// </summary>
             public static readonly DiagnosticDescriptor TMPRL001 = new(
                     id: "TMPRL001",
-                    title: $"Internal critical error in `{typeof(SourceBasedWorkflowStubGenerator).FullName}`",
+                    title: $"Internal critical error in `{typeof(WorkflowStubGenerator).FullName}`",
                     messageFormat: "{0}",
                     category: Category,
                     defaultSeverity: DiagnosticSeverity.Error,
@@ -81,7 +87,7 @@ namespace Temporal.Sdk.StubGenerator
             /// </summary>
             public static readonly DiagnosticDescriptor TMPRL002 = new(
                     id: "TMPRL002",
-                    title: $"Internal error in `{typeof(SourceBasedWorkflowStubGenerator).FullName}`",
+                    title: $"Internal error in `{typeof(WorkflowStubGenerator).FullName}`",
                     messageFormat: "{0}",
                     category: Category,
                     defaultSeverity: DiagnosticSeverity.Warning,
@@ -401,7 +407,7 @@ namespace Temporal.Sdk.StubGenerator
                         wfStubClassDeclNode.GetLocation(),
                         $"`{nameof(GenerateWorkflowStub)}` was invoked for a `{nameof(wfStubClassDeclNode)}` for which"
                       + $" {nameof(hasWfImplAttr)}={nameof(implementsIWfStub)}=False. There must be a bug in"
-                      + $" {nameof(SourceBasedWorkflowStubGenerator)}. Please report ({Diagnostics.SdkIssuesPage})."));
+                      + $" {nameof(WorkflowStubGenerator)}. Please report ({Diagnostics.SdkIssuesPage})."));
                 return;
             }
 
@@ -416,12 +422,23 @@ namespace Temporal.Sdk.StubGenerator
                         Diagnostics.TMPRL001,
                         wfStubClassDeclNode.GetLocation(),
                         $"The syntactic class declaration for `{wfStubClassDeclNodeIdentifier}` cannot be cannot be sematically"
-                      + $" interpreted as a type definition. There must be a bug in {nameof(SourceBasedWorkflowStubGenerator)}."
+                      + $" interpreted as a type definition. There must be a bug in {nameof(WorkflowStubGenerator)}."
                       + $" Please report ({Diagnostics.SdkIssuesPage})."));
                 return;
             }
 
             string wfStubTypeFullName = wfStubTypeSymbol.ToString();
+            string wfStubTypeName = wfStubTypeSymbol.Name;
+            string wfStubTypeNamespace = wfStubTypeSymbol.ContainingNamespace?.ToString() ?? String.Empty;
+
+            if (String.IsNullOrWhiteSpace(wfStubTypeName))
+            {
+                // @ToDo: replace with specific error type.
+                srcProdCtx.ReportDiagnostic(Diagnostics.Create(
+                        Diagnostics.TMPRL003,
+                        wfStubTypeSymbol.Locations,
+                        $"`wfStubTypeSymbol.Name` is null or white-space-only."));
+            }
 
             // Ensure that we have both, the marker attribute and the marker iface.
             // If we do not, give up with a descriptive error:
@@ -492,7 +509,7 @@ namespace Temporal.Sdk.StubGenerator
             string wfImplTypeName = wfImplTypeSymbol.Name;
             string wfImplTypeNamespace = wfImplTypeSymbol.ContainingNamespace?.ToString();
             string wfImplFullName = wfImplTypeNamespace + "." + wfImplTypeName;
-            //string wfImplTypeAssembly = wfImplTypeSymbol.ContainingAssembly?.Identity.ToString();
+            string wfImplTypeAssembly = wfImplTypeSymbol.ContainingAssembly?.Identity.ToString();
 
             // Look for the `WorkflowImplementationAttribute`:
 
@@ -527,7 +544,6 @@ namespace Temporal.Sdk.StubGenerator
             // It *optionally* has the Temporal WorkflowTypeName.
             // Get the WorkflowTypeName either from the attribute or fall back to the type name.
 
-
             string temporalWorkflowTypeName = null;
 
             ImmutableArray<KeyValuePair<string, TypedConstant>> attrArgs = wfImplAttribute.NamedArguments;
@@ -556,6 +572,14 @@ namespace Temporal.Sdk.StubGenerator
             // Scan the `wfImplTypeSymbol`, detecting all workflow APIs using the appropriate attributes
             // and issue the corresponding code for the stub methods.
 
+            StringBuilder generatedStubMainSection = WorkflowStubTemplateProvider.SingletonInstance.GetMainSection(
+                    wfStubTypeNamespace,
+                    wfStubTypeName,
+                    wfImplFullName,
+                    wfImplTypeAssembly);
+
+            List<StringBuilder> generatedStubSubsections = new();
+
             ImmutableArray<ISymbol> wfImplMembers = wfImplTypeSymbol.GetMembers();
             foreach (ISymbol wfImplMember in wfImplMembers)
             {
@@ -567,88 +591,274 @@ namespace Temporal.Sdk.StubGenerator
                 ImmutableArray<AttributeData> wfImplMethodAttributes = wfImplMethod.GetAttributes();
                 foreach (AttributeData wfImpMethAtt in wfImplMethodAttributes)
                 {
-                    string wfImpMethAttClassName = wfImpMethAtt.AttributeClass?.ToString();
+                    try
+                    {
+                        const string AsyncSuffix = "Async";
+                        string wfImpMethAttClassName = wfImpMethAtt.AttributeClass?.ToString();
 
-                    if (WfMainRoutineImplAttr.FullName.Equals(wfImpMethAttClassName))
-                    {
-                        GenerateWorkflowMainRoutineStub(srcProdCtx,
-                                                        compilation,
-                                                        wfStubTypeSymbol,
-                                                        temporalWorkflowTypeName,
-                                                        wfImplMethod,
-                                                        wfImpMethAtt);
-                        break;
+                        // If the attribute `wfImpMethAtt` matched one of the Implemenation-marker-attributes:
+                        if (WfMainRoutineImplAttr.FullName.Equals(wfImpMethAttClassName)
+                                || WfSigHndlImplAttr.FullName.Equals(wfImpMethAttClassName)
+                                || WfQryHndlImplAttr.FullName.Equals(wfImpMethAttClassName))
+                        {
+                            // Construct stub method name:
+                            string methodName = wfImplMethod.Name.Trim();
+                            if (!methodName.EndsWith(AsyncSuffix, StringComparison.OrdinalIgnoreCase))
+                            {
+                                methodName += AsyncSuffix;
+                            }
+
+                            // Get the Wf-Type-Name or Signal-Type-Name or Query-Type-Name (respectively) from the attribute:
+                            string attrPropNameForType = wfImpMethAttClassName switch
+                            {
+                                WfMainRoutineImplAttr.FullName => null,
+                                WfSigHndlImplAttr.FullName => WfSigHndlImplAttr.PrNmSigTypeName,
+                                WfQryHndlImplAttr.FullName => WfQryHndlImplAttr.PrNmQryTypeName,
+                                _ => null,
+                            };
+
+                            string temporalTypeName = wfImpMethAtt.NamedArguments.FirstOrDefault(na => na.Key.Equals(attrPropNameForType))
+                                                                                 .Value.Value?.ToString();
+
+                            if (String.IsNullOrWhiteSpace(temporalTypeName))
+                            {
+                                temporalTypeName = methodName;
+
+                                if (temporalTypeName.EndsWith(AsyncSuffix, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    temporalTypeName = temporalTypeName.Substring(0, temporalTypeName.Length - AsyncSuffix.Length);
+                                }
+                            }
+
+                            bool lastArgIsContext = false;
+                            if (wfImplMethod.Parameters.Length > 0)
+                            {
+                                lastArgIsContext = WfCtxIface.FullName.Equals(wfImplMethod.Parameters[wfImplMethod.Parameters.Length - 1].Type.ToString());
+                            }
+
+                            StringBuilder subsection = wfImpMethAttClassName switch
+                            {
+                                WfMainRoutineImplAttr.FullName => GenerateWorkflowMainRoutineStub(srcProdCtx,
+                                                                                                  temporalTypeName,
+                                                                                                  wfImplMethod,
+                                                                                                  methodName,
+                                                                                                  lastArgIsContext),
+                                WfSigHndlImplAttr.FullName => GenerateWorkflowSignalHandlerStub(srcProdCtx,
+                                                                                                temporalTypeName,
+                                                                                                wfImplMethod,
+                                                                                                methodName,
+                                                                                                lastArgIsContext),
+                                WfQryHndlImplAttr.FullName => GenerateWorkflowQueryHandlerStub(srcProdCtx,
+                                                                                               temporalTypeName,
+                                                                                               wfImplMethod,
+                                                                                               methodName,
+                                                                                               lastArgIsContext),
+                                _ => null,
+                            }; 
+
+                            if (subsection != null)
+                            {
+                                generatedStubSubsections.Add(subsection);
+                            }
+                        }
                     }
-                    else if (WfSigHndlImplAttr.FullName.Equals(wfImpMethAttClassName))
+                    catch (Exception ex)
                     {
-                        GenerateWorkflowSignalHandlerStub(srcProdCtx,
-                                                         compilation,
-                                                         wfStubTypeSymbol,
-                                                         temporalWorkflowTypeName,
-                                                         wfImplMethod,
-                                                         wfImpMethAtt);
-                        break;
+                        // @ToDo: replace with specific error type.
+                        srcProdCtx.ReportDiagnostic(Diagnostics.Create(
+                                Diagnostics.TMPRL003,
+                                wfImplMethod.Locations,
+                                $"Exception in source generator:"
+                              + $" {ex}"));
                     }
-                    else if (WfQryHndlImplAttr.FullName.Equals(wfImpMethAttClassName))
-                    {
-                        GenerateWorkflowQueryHandlerStub(srcProdCtx,
-                                                         compilation,
-                                                         wfStubTypeSymbol,
-                                                         temporalWorkflowTypeName,
-                                                         wfImplMethod,
-                                                         wfImpMethAtt);
-                        break;
-                    }
-                }
+                }  // foreach (AttributeData wfImpMethAtt in wfImplMethodAttributes)
             }
+
+            string generatedStubSrc = WorkflowStubTemplateProvider.SingletonInstance.MergeSections(generatedStubMainSection,
+                                                                                                   generatedStubSubsections);
+            srcProdCtx.AddSource(wfStubTypeName + ".g.cs", SourceText.From(generatedStubSrc, Encoding.UTF8));
+        }
+
+        private static string GetMethodSignature(IMethodSymbol method)
+        {
+            if (method == null)
+            {
+                return "null";
+            }
+
+            string typeName = method.ContainingType?.ToString();
+            if (!String.IsNullOrEmpty(typeName))
+            {
+                typeName += ".";
+            }
+
+            string signature = method.ToDisplayString();
+
+            if (signature.StartsWith(typeName))
+            {
+                signature = signature.Substring(typeName.Length);
+            }
+
+            return signature;
         }
 
 
         // Below APIs are not yet implemented. Just issuing errors as a means of printing progress so far:
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "PoC work in progress")]
-        private static void GenerateWorkflowMainRoutineStub(SourceProductionContext srcProdCtx,
-                                                            Compilation compilation,
-                                                            ITypeSymbol wfStubTypeSymbol,
-                                                            string temporalWorkflowTypeName,
-                                                            IMethodSymbol stubbedImplMethodSymbol,
-                                                            AttributeData stubbedImplMethodMarkerAttr)
+        private static StringBuilder GenerateWorkflowMainRoutineStub(SourceProductionContext srcProdCtx,
+                                                                     string workflowTypeName,
+                                                                     IMethodSymbol stubbedImplMethodSymbol,
+                                                                     string stubbedImplMethodName,
+                                                                     bool lastArgIsContext)
         {
+            string stubReturnType;
+            string implReturnType = stubbedImplMethodSymbol.ReturnType?.ToString() ?? "void";
+
+            // @ToDo: Enforce that a query implementation always returns Task<T> or some T.
+
+            if (implReturnType.Equals("void"))
+            {
+                throw new NotImplementedException("Support for void ExecWorkflow(..) methods is not yet implemented.");
+            }
+            if (implReturnType.Equals("System.Threading.Tasks.Task"))
+            {
+                throw new NotImplementedException("Support for Task ExecWorkflowAsync(..) methods is not yet implemented.");
+            }
+            else if (implReturnType.StartsWith("System.Threading.Tasks.Task<") && implReturnType.EndsWith(">"))
+            {
+                stubReturnType = implReturnType.Substring("System.Threading.Tasks.Task<".Length, implReturnType.Length - "System.Threading.Tasks.Task<".Length - 1);
+            }
+            else
+            {
+                stubReturnType = implReturnType;
+            }
+
+            ImmutableArray<IParameterSymbol> args = stubbedImplMethodSymbol.Parameters;
+            if ((args.Length == 0)
+                    || (args.Length == 1 && lastArgIsContext))
+            {
+                throw new NotImplementedException("Support for Main Workflow Routine Stubs with ZERO data input arguments is not yet implemented.");
+            }
+            
+            if ((args.Length == 1 && !lastArgIsContext)
+                    || (args.Length == 2 && lastArgIsContext))
+            {
+                return WorkflowStubTemplateProvider.SingletonInstance.GetExecWorkflow1ArgNotVoidSection(stubbedImplMethodName,
+                                                                                                        args[0].Type.ToString(),
+                                                                                                        stubReturnType,
+                                                                                                        workflowTypeName);
+            }
+
+            // @ToDo: replace with specific error type.
             srcProdCtx.ReportDiagnostic(Diagnostics.Create(
-                        Diagnostics.TMPRL002,
-                        stubbedImplMethodSymbol.Locations,
-                        $"INFO: Here we will add the Stub for the MAIN WF ROUTINE to `{wfStubTypeSymbol.Name}`-class."
-                      + $" The Stub will point to `{stubbedImplMethodSymbol.Name}`(..) in \"{temporalWorkflowTypeName}\"."));
+                    Diagnostics.TMPRL003,
+                    stubbedImplMethodSymbol.Locations,
+                    $"Invalid Main Workflow Execution Routine signature."
+                  + $" A Main Workflow Execution Routine method may have no more than 2 total arguments,"
+                  + $" including: 0 or 1 data input arguments, followed by an optional `{WfCtxIface.TypeName}`-argument."
+                  + $" However, the method `{stubbedImplMethodName}` is marked with a [{WfMainRoutineImplAttr.TypeName}]"
+                  + $" and has the following invalid signature: `{GetMethodSignature(stubbedImplMethodSymbol)}`."
+                  + $" A stub for this method will NOT be generated."));
+
+            return null;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "PoC work in progress")]
-        private static void GenerateWorkflowSignalHandlerStub(SourceProductionContext srcProdCtx,
-                                                              Compilation compilation,
-                                                              ITypeSymbol wfStubTypeSymbol,
-                                                              string temporalWorkflowTypeName,
-                                                              IMethodSymbol stubbedImplMethodSymbol,
-                                                              AttributeData stubbedImplMethodMarkerAttr)
+        private static StringBuilder GenerateWorkflowSignalHandlerStub(SourceProductionContext srcProdCtx,
+                                                                       string signalTypeName,
+                                                                       IMethodSymbol stubbedImplMethodSymbol,
+                                                                       string stubbedImplMethodName,
+                                                                       bool lastArgIsContext)
         {
+            ImmutableArray<IParameterSymbol> args = stubbedImplMethodSymbol.Parameters;
+            if ((args.Length == 0)
+                    || (args.Length == 1 && lastArgIsContext))
+            {
+                return WorkflowStubTemplateProvider.SingletonInstance.GetSendSignal0ArgSection(stubbedImplMethodName, signalTypeName);
+            }
+
+            if ((args.Length == 1 && !lastArgIsContext)
+                    || (args.Length == 2 && lastArgIsContext))
+            {
+                return WorkflowStubTemplateProvider.SingletonInstance.GetSendSignal1ArgSection(stubbedImplMethodName,
+                                                                                               args[0].Type.ToString(),
+                                                                                               signalTypeName);
+            }
+
+            // @ToDo: replace with specific error type.
             srcProdCtx.ReportDiagnostic(Diagnostics.Create(
-                        Diagnostics.TMPRL002,
-                        stubbedImplMethodSymbol.Locations,
-                        $"INFO: Here we will add the Stub for the SIGNAL HANDLER to `{wfStubTypeSymbol.Name}`-class."
-                      + $" The Stub will point to `{stubbedImplMethodSymbol.Name}`(..) in \"{temporalWorkflowTypeName}\"."));
+                    Diagnostics.TMPRL003,
+                    stubbedImplMethodSymbol.Locations,
+                    $"Invalid Signal Handler signature."
+                  + $" A Signal Handler method may have no more than 2 total arguments,"
+                  + $" including: 0 or 1 data input arguments, followed by an optional `{WfCtxIface.TypeName}`-argument."
+                  + $" However, the method `{stubbedImplMethodName}` is marked with a [{WfSigHndlImplAttr.TypeName}]"
+                  + $" and has the following invalid signature: `{GetMethodSignature(stubbedImplMethodSymbol)}`."
+                  + $" A stub for this method will NOT be generated."));
+
+            return null;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "PoC work in progress")]
-        private static void GenerateWorkflowQueryHandlerStub(SourceProductionContext srcProdCtx,
-                                                             Compilation compilation,
-                                                             ITypeSymbol wfStubTypeSymbol,
-                                                             string temporalWorkflowTypeName,
-                                                             IMethodSymbol stubbedImplMethodSymbol,
-                                                             AttributeData stubbedImplMethodMarkerAttr)
+        private static StringBuilder GenerateWorkflowQueryHandlerStub(SourceProductionContext srcProdCtx,
+                                                                      string queryTypeName,
+                                                                      IMethodSymbol stubbedImplMethodSymbol,
+                                                                      string stubbedImplMethodName,
+                                                                      bool lastArgIsContext)
         {
+            // @ToDo: PROPERLY Enforce that a query implementation always returns Task<T> or some T.
+            string stubReturnType = null;
+            if (stubbedImplMethodSymbol.ReturnsVoid)
+            {
+                throw new Exception("Query handler must return a value.");
+            }
+            else
+            {
+                string implReturnType = stubbedImplMethodSymbol.ReturnType?.ToString() ?? "void";
+
+                // @ToDo: Enforce that a query implementation always returns Task<T> or some T.
+
+                if (implReturnType.Equals("void"))
+                {
+                    throw new Exception("Query handler must return a value.");
+                }
+                else if (implReturnType.StartsWith("System.Threading.Tasks.Task<") && implReturnType.EndsWith(">"))
+                {
+                    stubReturnType = implReturnType.Substring("System.Threading.Tasks.Task<".Length, stubReturnType.Length - "System.Threading.Tasks.Task<".Length - 1);
+                }
+                else if (implReturnType.Equals("System.Threading.Tasks.Task"))
+                {
+                    throw new Exception("Query handler must not return a plain Task");
+                }
+                else
+                {
+                    stubReturnType = implReturnType;
+                }
+            }
+
+            ImmutableArray<IParameterSymbol> args = stubbedImplMethodSymbol.Parameters;
+            if ((args.Length == 0)
+                    || (args.Length == 1 && lastArgIsContext))
+            {
+                return WorkflowStubTemplateProvider.SingletonInstance.GetExecQuery0ArgSection(stubbedImplMethodName, stubReturnType, queryTypeName);
+            }
+
+            if ((args.Length == 1 && !lastArgIsContext)
+                    || (args.Length == 2 && lastArgIsContext))
+            {
+                throw new NotImplementedException("Support for Query Stubs with data input arguments is not yet implemented.");
+            }
+
+            // @ToDo: replace with specific error type.
             srcProdCtx.ReportDiagnostic(Diagnostics.Create(
-                        Diagnostics.TMPRL002,
-                        stubbedImplMethodSymbol.Locations,
-                        $"INFO: Here we will add the Stub for the QUERY HANDLER to `{wfStubTypeSymbol.Name}`-class."
-                      + $" The Stub will point to `{stubbedImplMethodSymbol.Name}`(..) in \"{temporalWorkflowTypeName}\"."));
+                    Diagnostics.TMPRL003,
+                    stubbedImplMethodSymbol.Locations,
+                    $"Invalid Query Handler signature."
+                  + $" A Query Handler method may have no more than 2 total arguments,"
+                  + $" including: 0 or 1 data input arguments, followed by an optional `{WfCtxIface.TypeName}`-argument."
+                  + $" However, the method `{stubbedImplMethodName}` is marked with a [{WfQryHndlImplAttr.TypeName}]"
+                  + $" and has the following invalid signature: `{GetMethodSignature(stubbedImplMethodSymbol)}`."
+                  + $" A stub for this method will NOT be generated."));
+
+            return null;
         }
     }
 }

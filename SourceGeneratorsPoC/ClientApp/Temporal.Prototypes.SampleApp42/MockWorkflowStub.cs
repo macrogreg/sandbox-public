@@ -2,7 +2,7 @@
 
 namespace Temporal.Prototypes.SampleApp42
 {
-    [WorkflowStub(typeof(SampleAvWorkflowImplementation))]
+    [WorkflowStub(typeof(SampleAvWorkflowImplementation)) ]
     internal partial class MockWorkflowStub : IWorkflowStub
     {        
     }

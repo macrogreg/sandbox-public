@@ -1,4 +1,5 @@
-﻿using Temporal.Prototypes.MockSdk;
+﻿using System;
+using Temporal.Prototypes.MockSdk;
 
 namespace Temporal.Prototypes.OtherAssemblyWorkflow
 {
@@ -43,9 +44,9 @@ namespace Temporal.Prototypes.OtherAssemblyWorkflow
         }
 
         [WorkflowSignalHandler(SignalTypeName = "PatricularSignal")]
-        public void HandleSignal02(double input)
+        public void HandleSignal02()
         {
-            Console.WriteLine($"{nameof(HandleSignal02)}({nameof(input)}={input}) was invoked.");            
+            Console.WriteLine($"{nameof(HandleSignal02)}() was invoked.");            
         }
 
         public async Task AnotherPublicApi(string input)

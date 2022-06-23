@@ -43,9 +43,9 @@ namespace Temporal.Prototypes.AWfImplenetation
         }
 
         [WorkflowSignalHandler(SignalTypeName = "PatricularSignal")]
-        public void HandleSignal2(double input)
+        public void HandleSignal2()
         {
-            Console.WriteLine($"{nameof(HandleSignal2)}({nameof(input)}={input}) was invoked.");            
+            Console.WriteLine($"{nameof(HandleSignal2)}() was invoked.");            
         }
 
         public async Task AnotherPublicApi(string input)

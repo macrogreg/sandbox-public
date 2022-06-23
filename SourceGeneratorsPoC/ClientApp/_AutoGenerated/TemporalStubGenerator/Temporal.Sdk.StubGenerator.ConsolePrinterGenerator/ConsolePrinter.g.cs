@@ -18,7 +18,7 @@ namespace Temporal.Sdk.Generated
 
         public void WriteLine(string msg)
         {
-            msg = msg ?? String.Empty;
+            msg ??= String.Empty;
             Console.WriteLine($"[{_prefix}]!! {msg}");
         }
     }
