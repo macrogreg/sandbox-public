@@ -6,6 +6,6 @@ namespace Temporal.Sdk.StubGenerator
 {
     internal class PoC_Hardcodings
     {
-        public const string SourceBaseDir = @"c:\00\Code\MyPublicSandbox\sandbox-public\SourceGeneratorsPoC";
+        public const string SourceBaseDir = @"c:\00\Code\GitHub\Sandbox-Public\sandbox-public\SourceGeneratorsPoC\";
     }
 }

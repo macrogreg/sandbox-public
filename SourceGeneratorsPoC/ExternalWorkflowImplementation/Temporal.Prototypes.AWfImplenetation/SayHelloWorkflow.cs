@@ -1,14 +1,15 @@
-﻿using System;
-using System.Threading.Tasks;
-using Temporal.Prototypes.MockSdk;
-
+﻿
+#pragma warning disable IDE0065  // Misplaced using directive (notmally, usings must be outside the namespace)
 
 namespace Temporal.Samples.VerySimpleWorkflow.WorkflowHost
 {
+
     using System;
     using System.Threading.Tasks;
+    using Temporal.Prototypes.MockSdk;
     using Temporal.Samples.VerySimpleWorkflow.ActivityHost;
 
+    public record GreetingKind(string Utterance);
     public record GreetingInfo(int GreetingsCountMax, string PersonName);
     public record CompletedGreetingsInfo(int GreetingsCount);
 
@@ -20,7 +21,7 @@ namespace Temporal.Samples.VerySimpleWorkflow.WorkflowHost
         private int _completedCount = 0;
 
         [WorkflowMainRoutine]
-        public async Task SayHelloAsync(GreetingInfo initialGreetingSpec, IWorkflowContext workflowCtx)
+        public async Task SayManyHellosAsync(GreetingInfo initialGreetingSpec, IWorkflowContext workflowCtx)
         {
             if (initialGreetingSpec != null)
             {
@@ -35,18 +36,6 @@ namespace Temporal.Samples.VerySimpleWorkflow.WorkflowHost
 
                 await workflowCtx.SleepAsync(TimeSpan.FromMinutes(1));
             }
-
-            Delegate y1 = ActivityImpl.Act2;
-
-            var z1 = ActivityImpl.Act2;
-
-            Delegate y2 = ActivityImpl.ActivityMethod;
-
-            var z2 = ActivityImpl.ActivityMethod;
-
-            Action x1 = ActivityImpl.Act1;
-            //Action<string> x2 = ActivityImpl.Act1;
-            Action<int> x3 = ActivityImpl.Act1;
         }
 
         [WorkflowSignalHandler]
@@ -64,22 +53,13 @@ namespace Temporal.Samples.VerySimpleWorkflow.WorkflowHost
             return new CompletedGreetingsInfo(_completedCount);
         }
     }
-
-    internal class ActivityImpl
-    {
-        public void ActivityMethod()
-        {
-        }
-
-        public static void Act2(double x) { }
-
-        public static void Act1() { }
-        public static void Act1(int x) { }
-    }
 }
 
 namespace Temporal.Samples.VerySimpleWorkflow.ActivityHost
 {
+    using System;
+    using System.Threading.Tasks;
+
     public record UtteranceInfo(string PersonName);
 
     public static class Utterances
@@ -92,3 +72,5 @@ namespace Temporal.Samples.VerySimpleWorkflow.ActivityHost
         }
     }
 }
+
+#pragma warning restore IDE0065  // Misplaced using directive (notmally, usings must be outside the namespace)
