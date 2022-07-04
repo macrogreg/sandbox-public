@@ -2,7 +2,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Temporal.Prototypes.MockSdk;
+using Temporal.Sdk.StubGenerator.MOckSdkDependencies;
 
 namespace __Namespace_Template__
 {
