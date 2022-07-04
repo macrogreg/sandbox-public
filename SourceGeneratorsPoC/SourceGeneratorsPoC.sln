@@ -9,9 +9,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClientApp", "ClientApp\Clie
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MockSdkLibrary", "MockSdkLibrary\MockSdkLibrary.csproj", "{C7B68794-7D00-4C07-9ACD-0778CA44D992}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExternalWorkflowImplementation", "ExternalWorkflowImplementation\ExternalWorkflowImplementation.csproj", "{7AE7C1B4-D0A8-43C4-919B-8D74EB4079A5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ExternalWorkflowImplementation", "ExternalWorkflowImplementation\ExternalWorkflowImplementation.csproj", "{7AE7C1B4-D0A8-43C4-919B-8D74EB4079A5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BinaryOnlyWfImplementation", "BinaryOnlyWfImplementation\BinaryOnlyWfImplementation.csproj", "{06AD0C44-6644-4E06-A694-5E5187021BD8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BinaryOnlyWfImplementation", "BinaryOnlyWfImplementation\BinaryOnlyWfImplementation.csproj", "{06AD0C44-6644-4E06-A694-5E5187021BD8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientAppViaNuget01", "ClientAppViaNuget01\ClientAppViaNuget01.csproj", "{177DEBFF-F46C-4733-932F-6544E81F5F05}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{06AD0C44-6644-4E06-A694-5E5187021BD8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{06AD0C44-6644-4E06-A694-5E5187021BD8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{06AD0C44-6644-4E06-A694-5E5187021BD8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{177DEBFF-F46C-4733-932F-6544E81F5F05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{177DEBFF-F46C-4733-932F-6544E81F5F05}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{177DEBFF-F46C-4733-932F-6544E81F5F05}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{177DEBFF-F46C-4733-932F-6544E81F5F05}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
