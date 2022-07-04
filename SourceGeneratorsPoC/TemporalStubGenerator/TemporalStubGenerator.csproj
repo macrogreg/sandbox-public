@@ -28,6 +28,7 @@
     <EmbeddedResource Update="Properties\Resources.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <CustomToolNamespace>Temporal.Sdk.StubGenerator</CustomToolNamespace>
     </EmbeddedResource>
   </ItemGroup>
 

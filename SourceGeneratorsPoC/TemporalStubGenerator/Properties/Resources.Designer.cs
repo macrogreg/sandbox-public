@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace TemporalStubGenerator.Properties {
+namespace Temporal.Sdk.StubGenerator {
     using System;
     
     
@@ -57,6 +57,59 @@ namespace TemporalStubGenerator.Properties {
             }
             set {
                 resourceCulture = value;
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to using System;
+        ///
+        ///namespace Temporal.Sdk.Generated
+        ///{
+        ///    public class Template__ConsolePrinter__
+        ///    {
+        ///        private readonly string _prefix;
+        ///
+        ///        public Template__ConsolePrinter__(string prefix)
+        ///        {
+        ///            _prefix = prefix ?? String.Empty;
+        ///        }
+        ///
+        ///        public void WriteLine()
+        ///        {
+        ///            Console.WriteLine();
+        ///        }
+        ///
+        ///        public void WriteLine(string msg)
+        ///        {
+        ///            msg ??= String.Empty;
+        ///            Console.WriteLine($&quot;[{_prefix}]!! {msg}&quot;) [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string Template__ConsolePrinter__ {
+            get {
+                return ResourceManager.GetString("Template__ConsolePrinter__", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to #region MAIN_TEMPLATE
+        ///using System;
+        ///using System.Threading;
+        ///using System.Threading.Tasks;
+        ///using Temporal.Sdk.StubGenerator.MOckSdkDependencies;
+        ///
+        ///namespace __Namespace_Template__
+        ///{
+        ///    /// &lt;summary&gt;
+        ///    /// This class is an auto=generated stub for &lt;see cref=&quot;__WorkflowImplementationType_Template__&quot; /&gt;
+        ///    /// (in assembly &quot;__WorkflowImplementationTypeAsm_Template__&quot;).
+        ///    /// &lt;/summary&gt;
+        ///    internal partial class __WorkflowStubClass_Template__
+        ///    {
+        ///        private readonly IWorkflowHandle _wor [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string Template__WorkflowStub__ {
+            get {
+                return ResourceManager.GetString("Template__WorkflowStub__", resourceCulture);
             }
         }
     }

@@ -2,7 +2,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Temporal.Sdk.StubGenerator.MOckSdkDependencies;
+using Temporal.Prototypes.MockSdk;
 
 namespace __Namespace_Template__
 {
@@ -123,8 +123,23 @@ namespace __Namespace_Template__
 
 #region TEMPLATE_SUPPORT
 
-namespace __Namespace_Template__
+namespace Temporal.Prototypes.MockSdk
 {
+    internal interface IWorkflowHandle
+    {
+    }
+
+    internal class SignalWorkflowConfiguration
+    {
+    }
+
+    internal class QueryWorkflowConfiguration
+    {
+    }
+}
+
+namespace __Namespace_Template__
+{    
     internal class __WorkflowImplementationType_Template__
     {
     }
