@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Temporal.Prototypes.MockSdk;
-using Temporal.Sdk.Generated;
+//using Temporal.Sdk.Generated;
 
 namespace Temporal.Prototypes.SampleApp42
 {
@@ -16,8 +16,8 @@ namespace Temporal.Prototypes.SampleApp42
         {
             Console.WriteLine($"\"{this.GetType().FullName}\" was run.");
 
-            ConsolePrinter printer = new("XYZ");
-            printer.WriteLine("Printed using generated code.");
+            //ConsolePrinter printer = new("XYZ");
+            //printer.WriteLine("Printed using generated code.");
 
             UseWfFromThisAssembly().GetAwaiter().GetResult();
 

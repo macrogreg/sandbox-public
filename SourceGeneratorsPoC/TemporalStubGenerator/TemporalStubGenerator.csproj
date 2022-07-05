@@ -43,11 +43,27 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="bin\Debug\netstandard2.0\\TemporalStubGenerator.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Package the generator in the analyzer directory of the nuget package: -->
-    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="$(OutputPath)\$(AssemblyName).dll"
+          Link="_Build-Output\%(RecursiveDir)%(Filename)%(Extension)"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="true" />
 
     <!-- Package the props files to emit files for info purposes by default: -->
-    <None Include="$(MSBuildProjectDirectory)\Properties\TemporalStubGenerator.props" Pack="true" PackagePath="build" Visible="false" />
+    <None Include="$(MSBuildProjectDirectory)\Properties\TemporalStubGenerator.props"
+          Pack="true"
+          PackagePath="build"
+          Visible="true" />
+
+    <None Include="$(MSBuildProjectDirectory)\Properties\TemporalStubGenerator.targets"
+          Pack="true"
+          PackagePath="build"
+          Visible="true" />
     
   </ItemGroup>
 
