@@ -16,7 +16,7 @@ namespace __Namespace_Template__
 
         public __WorkflowStubClass_Template__(IWorkflowHandle workflowHandle)
         {
-            if (_workflowHandle == null)
+            if (workflowHandle == null)
             {
                 throw new ArgumentNullException(nameof(workflowHandle));
             }
@@ -43,10 +43,14 @@ namespace __Namespace_Template__
         {
             const string WorkflowTypeName = "__WorkflowTypeName_Template__";
 
-            Console.WriteLine($"__ExecWorkflowMethodName_Template__(..) was invoked to execute the workflow via {this.GetType().Name}:"
+            Console.WriteLine($"__ExecWorkflowMethodName_Template__(..) was invoked [SYNC part] to execute the workflow via {this.GetType().Name}:"
                             + $" WorkflowTypeName=\"{WorkflowTypeName}\".");
 
-            await Task.Delay(millisecondsDelay: 1);
+            await Task.Delay(millisecondsDelay: 100);
+
+            Console.WriteLine($"__ExecWorkflowMethodName_Template__(..) was invoked [ASYNC part] to execute the workflow via {this.GetType().Name}:"
+                            + $" WorkflowTypeName=\"{WorkflowTypeName}\".");
+
             return default(__WfResultType_Template__);
         }
 

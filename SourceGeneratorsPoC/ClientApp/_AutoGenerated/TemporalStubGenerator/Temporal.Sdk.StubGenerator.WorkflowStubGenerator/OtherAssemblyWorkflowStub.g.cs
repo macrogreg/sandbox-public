@@ -15,7 +15,7 @@ namespace Temporal.Prototypes.OtherAssemblyWorkflow
 
         public OtherAssemblyWorkflowStub(IWorkflowHandle workflowHandle)
         {
-            if (_workflowHandle == null)
+            if (workflowHandle == null)
             {
                 throw new ArgumentNullException(nameof(workflowHandle));
             }
@@ -38,10 +38,14 @@ namespace Temporal.Prototypes.OtherAssemblyWorkflow
         {
             const string WorkflowTypeName = "Exec";
 
-            Console.WriteLine($"ExecAsync(..) was invoked to execute the workflow via {this.GetType().Name}:"
+            Console.WriteLine($"ExecAsync(..) was invoked [SYNC part] to execute the workflow via {this.GetType().Name}:"
                             + $" WorkflowTypeName=\"{WorkflowTypeName}\".");
 
-            await Task.Delay(millisecondsDelay: 1);
+            await Task.Delay(millisecondsDelay: 100);
+
+            Console.WriteLine($"ExecAsync(..) was invoked [ASYNC part] to execute the workflow via {this.GetType().Name}:"
+                            + $" WorkflowTypeName=\"{WorkflowTypeName}\".");
+
             return default(Temporal.Prototypes.OtherAssemblyWorkflow.AWfResult);
         }
 

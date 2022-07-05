@@ -11,7 +11,7 @@ namespace Temporal.Prototypes.MockSdk
         Task DescribeAsync(CancellationToken cancelToken = default);
     }
 
-    internal class WorkflowHandle : IWorkflowHandle
+    public class WorkflowHandle : IWorkflowHandle
     {
         public string Namespace
         {

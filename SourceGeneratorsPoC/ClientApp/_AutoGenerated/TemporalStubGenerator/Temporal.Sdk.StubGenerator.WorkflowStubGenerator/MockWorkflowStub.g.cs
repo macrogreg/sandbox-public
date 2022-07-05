@@ -15,7 +15,7 @@ namespace Temporal.Prototypes.SampleApp42
 
         public MockWorkflowStub(IWorkflowHandle workflowHandle)
         {
-            if (_workflowHandle == null)
+            if (workflowHandle == null)
             {
                 throw new ArgumentNullException(nameof(workflowHandle));
             }
@@ -38,10 +38,14 @@ namespace Temporal.Prototypes.SampleApp42
         {
             const string WorkflowTypeName = "ExecWorkflow";
 
-            Console.WriteLine($"ExecWorkflowAsync(..) was invoked to execute the workflow via {this.GetType().Name}:"
+            Console.WriteLine($"ExecWorkflowAsync(..) was invoked [SYNC part] to execute the workflow via {this.GetType().Name}:"
                             + $" WorkflowTypeName=\"{WorkflowTypeName}\".");
 
-            await Task.Delay(millisecondsDelay: 1);
+            await Task.Delay(millisecondsDelay: 100);
+
+            Console.WriteLine($"ExecWorkflowAsync(..) was invoked [ASYNC part] to execute the workflow via {this.GetType().Name}:"
+                            + $" WorkflowTypeName=\"{WorkflowTypeName}\".");
+
             return default(Temporal.Prototypes.SampleApp42.SampleAvWfResult);
         }
 

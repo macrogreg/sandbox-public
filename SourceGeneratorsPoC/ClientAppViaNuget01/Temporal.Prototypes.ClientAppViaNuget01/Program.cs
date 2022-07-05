@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Temporal.Prototypes.MockSdk;
-using Temporal.Sdk.Generated;
 
-namespace Temporal.Prototypes.SampleApp42
+namespace Temporal.Prototypes.ClientAppViaNuget01
 {
     public class Program
     {
@@ -15,9 +14,6 @@ namespace Temporal.Prototypes.SampleApp42
         public void Run()
         {
             Console.WriteLine($"\"{this.GetType().FullName}\" was run.");
-
-            ConsolePrinter printer = new("XYZ");
-            printer.WriteLine("Printed using generated code.");
 
             UseWfFromThisAssembly().GetAwaiter().GetResult();
 
@@ -31,7 +27,7 @@ namespace Temporal.Prototypes.SampleApp42
         private async Task UseWfFromThisAssembly()
         {
             IWorkflowHandle mockWfHandle = new WorkflowHandle();
-            MockWorkflowStub mockWf = new(mockWfHandle);
+            MockWfStub mockWf = new(mockWfHandle);
 
             Task<SampleAvWfResult> mockWfConclusion = mockWf.ExecWorkflowAsync(new SampleAvWfInput("Sample-Wf-Input-1", 42));
             Console.WriteLine();
