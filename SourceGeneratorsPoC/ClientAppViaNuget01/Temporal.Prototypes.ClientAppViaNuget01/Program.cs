@@ -15,8 +15,9 @@ namespace Temporal.Prototypes.ClientAppViaNuget01
         {
             Console.WriteLine($"\"{this.GetType().FullName}\" was run.");
 
-            UseWfFromThisAssembly().GetAwaiter().GetResult();
+            UseDirectWfFromThisAssembly().GetAwaiter().GetResult();
 
+            UseStubForWfFromThisAssembly().GetAwaiter().GetResult();
 
             Console.WriteLine($"\"{this.GetType().FullName}\" about to finish. Press enter.");
             Console.ReadLine();
@@ -24,27 +25,55 @@ namespace Temporal.Prototypes.ClientAppViaNuget01
             Console.WriteLine($"\"{this.GetType().FullName}\" stopped.");
         }
 
-        private async Task UseWfFromThisAssembly()
+        private async Task UseDirectWfFromThisAssembly()
         {
-            IWorkflowHandle mockWfHandle = new WorkflowHandle();
-            MockWfStub mockWf = new(mockWfHandle);
+            Console.WriteLine($"\n----------- {nameof(UseDirectWfFromThisAssembly)}() {{");
 
-            Task<SampleAvWfResult> mockWfConclusion = mockWf.ExecWorkflowAsync(new SampleAvWfInput("Sample-Wf-Input-1", 42));
+            SampleAvWfImpl wf = new();
+
+            Task<SampleAvWfResult> wfConclusion = wf.ExecWorkflowAsync(new SampleAvWfInput("Sample-Wf-Input-1", 5), null);
             Console.WriteLine();
 
-            await mockWf.HandleASignalAsync("Sample-Signal-Input-1");
+            await wf.HandleASignalAsync("Sample-Signal-Input-1");
             Console.WriteLine();
 
-            await mockWf.HandleAnotherSignalAsync();
+            wf.HandleAnotherSignal();
             Console.WriteLine();
 
-            await mockWf.QuerySomeStateAsync();
+            wf.QuerySomeState();
             Console.WriteLine();
 
-            SampleAvWfResult res = await mockWfConclusion;
+            SampleAvWfResult res = await wfConclusion;
             Console.WriteLine($"res: \"{res?.ToString() ?? "<NULL>"}\".");
 
-            Console.WriteLine();
+            Console.WriteLine("\n----------- }");
+        }
+
+        private async Task UseStubForWfFromThisAssembly()
+        {
+            await Task.Delay(millisecondsDelay: 1);
+
+            Console.WriteLine($"\n----------- {nameof(UseStubForWfFromThisAssembly)}() {{");
+
+            // IWorkflowHandle mockWfHandle = new WorkflowHandle();
+            // MockWfStub mockWf = new(mockWfHandle);
+
+            // Task<SampleAvWfResult> mockWfConclusion = mockWf.ExecWorkflowAsync(new SampleAvWfInput("Sample-Wf-Input-2", 10));
+            // Console.WriteLine();
+
+            // await mockWf.HandleASignalAsync("Sample-Signal-Input-2");
+            // Console.WriteLine();
+
+            // await mockWf.HandleAnotherSignalAsync();
+            // Console.WriteLine();
+
+            // await mockWf.QuerySomeStateAsync();
+            // Console.WriteLine();
+
+            // SampleAvWfResult res = await mockWfConclusion;
+            // Console.WriteLine($"res: \"{res?.ToString() ?? "<NULL>"}\".");
+
+            Console.WriteLine("\n----------- }");
         }
     }
 }
